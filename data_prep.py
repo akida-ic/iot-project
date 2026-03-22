@@ -3,12 +3,12 @@ import numpy as np
 from scipy import stats
 import datetime
 
-INDOOR_FILE  = 'indoor_RAW_DATA.xlsx'
-WEATHER_FILE = 'weather_15min_NEW.xlsx'
-SLEEP_FILE   = 'sleep_summary_NEW.xlsx'
-STAGES_FILE  = 'sleep_stages_NEW.csv'
-HR_FILE      = 'sleep_hr_timeseries_NEW.csv'
-RESP_FILE    = 'sleep_respiration_timeseries_NEW.csv'
+INDOOR_FILE  = 'indoor_data.xlsx'
+WEATHER_FILE = 'weather_15min.xlsx'
+SLEEP_FILE   = 'sleep_summary.xlsx'
+STAGES_FILE  = 'sleep_stages.csv'
+HR_FILE      = 'sleep_hr_timeseries.csv'
+RESP_FILE    = 'sleep_respiration_timeseries.csv'
 
 DAYTIME_START  = 8
 DAYTIME_END    = 18
@@ -144,3 +144,85 @@ weather_15 = weather[
 ts_aligned = indoor_15.merge(
     weather_15, left_on='timestamp_r', right_on='datetime', how='inner'
 ).dropna()
+
+# ── data volume summary ───────────────────────────────────────────────────────
+if __name__ == '__main__':
+    # raw counts (before resample/processing)
+    indoor_raw = pd.read_excel(INDOOR_FILE, sheet_name='indoor')
+    indoor_raw = indoor_raw.drop(columns=['Unnamed: 4'], errors='ignore')
+    indoor_raw['timestamp'] = pd.to_datetime(indoor_raw['timestamp'])
+
+    weather_raw = pd.read_excel(WEATHER_FILE, sheet_name='Sheet1')
+    weather_raw['datetime'] = pd.to_datetime(weather_raw['datetime'])
+    w_filtered = weather_raw[
+        (weather_raw['datetime'].dt.date >= pd.Timestamp('2026-02-16').date()) &
+        (weather_raw['datetime'].dt.date <= pd.Timestamp('2026-02-28').date())
+    ]
+
+    sleep_raw2 = pd.read_excel(SLEEP_FILE, sheet_name='Sheet1')
+    sleep_raw2['date_dt'] = pd.to_datetime(sleep_raw2['date'])
+    s_filtered = sleep_raw2[
+        (sleep_raw2['date_dt'].dt.date >= pd.Timestamp('2026-02-16').date()) &
+        (sleep_raw2['date_dt'].dt.date <= pd.Timestamp('2026-03-01').date())
+    ]
+
+    hr_raw2     = pd.read_csv(HR_FILE)
+    resp_raw2   = pd.read_csv(RESP_FILE)
+    stages_raw2 = pd.read_csv(STAGES_FILE)
+    hr_f   = hr_raw2[(hr_raw2['date'] >= '2026-02-16') & (hr_raw2['date'] <= '2026-03-01')]
+    resp_f = resp_raw2[(resp_raw2['date'] >= '2026-02-16') & (resp_raw2['date'] <= '2026-03-01')]
+    st_f   = stages_raw2[(stages_raw2['date'] >= '2026-02-16') & (stages_raw2['date'] <= '2026-03-01')]
+
+    print("\n=== RAW DATA (before processing) ===")
+    print(f"Indoor sensor:      {len(indoor_raw)} records (raw, before resample)")
+    print(f"Outdoor weather:    {len(w_filtered)} records, Feb 16-28")
+    print(f"Garmin daily:       {len(s_filtered)} nights, Feb 16 – Mar 1")
+    print(f"Garmin HR:          {len(hr_f)} records, {hr_f['date'].nunique()} nights")
+    print(f"Garmin respiration: {len(resp_f)} records, {resp_f['date'].nunique()} nights")
+    print(f"Garmin stages:      {len(st_f)} segments, {st_f['date'].nunique()} nights")
+
+    print("\n=== PROCESSED DATA (after resample/cleaning) ===")
+    print(f"Indoor sensor:      {len(indoor)} records (after 15-min resample + backfill)")
+    print(f"Final dataset:      n = {len(merged)} days, {merged['light_date'].min()} to {merged['light_date'].max()}")
+    print(f"15-min ts_aligned:  {len(ts_aligned)} points (daytime 08:00-18:00)")
+
+    print("\n=== DAYTIME BRIGHTNESS MISSING DATA (08:00-18:00, expected 40 slots/day) ===")
+    indoor_raw['ts_15'] = indoor_raw['timestamp'].dt.round('15min')
+    indoor_raw['date_only'] = indoor_raw['ts_15'].dt.date
+    indoor_raw['hour_only'] = indoor_raw['ts_15'].dt.hour
+    daytime_raw = indoor_raw[(indoor_raw['hour_only'] >= 8) & (indoor_raw['hour_only'] < 18)]
+    for date in sorted(daytime_raw['date_only'].unique()):
+        day = daytime_raw[daytime_raw['date_only'] == date]
+        actual = len(day)
+        expected = 40
+        missing = expected - actual
+        pct = actual / expected * 100
+        if missing > 0:
+            expected_slots = pd.date_range(f'{date} 08:00', f'{date} 17:45', freq='15min')
+            actual_slots = set(day['ts_15'].dt.floor('15min'))
+            missing_slots = [str(s.time()) for s in expected_slots if s not in actual_slots]
+            print(f"  {date}: {actual}/{expected} ({pct:.0f}%), missing: {missing_slots}")
+        else:
+            print(f"  {date}: {actual}/{expected} (100%)")
+
+    print("\n=== SLEEP-PERIOD HUMIDITY & TEMPERATURE ===")
+    sleep_raw3 = pd.read_excel(SLEEP_FILE, sheet_name='Sheet1')
+    sleep_raw3['sleep_start_dt'] = pd.to_datetime(sleep_raw3['sleep_start'], unit='ms')
+    sleep_raw3['sleep_end_dt']   = pd.to_datetime(sleep_raw3['sleep_end'],   unit='ms')
+    sleep_raw3['date_str'] = pd.to_datetime(sleep_raw3['date']).dt.date.astype(str)
+    sleep_raw3 = sleep_raw3[
+        (sleep_raw3['date_str'] >= '2026-02-16') &
+        (sleep_raw3['date_str'] <= '2026-03-01')
+    ]
+    for _, row in sleep_raw3.iterrows():
+        mask = (indoor_raw['timestamp'] >= row['sleep_start_dt']) & (indoor_raw['timestamp'] <= row['sleep_end_dt'])
+        vals = indoor_raw[mask]
+        duration_h = (row['sleep_end_dt'] - row['sleep_start_dt']).total_seconds() / 3600
+        expected = int(duration_h * 4)
+        actual = len(vals)
+        pct = actual / expected * 100 if expected > 0 else 0
+        hum_mean = f"{vals['humidity'].mean():.1f}%" if actual >= 3 else "NaN"
+        temp_mean = f"{vals['temperature'].mean():.1f}°C" if actual >= 3 else "NaN"
+        status = "(INSUFFICIENT)" if actual < 3 else ""
+        print(f"  {row['date_str']}: {actual}/{expected} ({pct:.0f}%) {status}")
+        print(f"    humidity={hum_mean}, temperature={temp_mean}, sleep {row['sleep_start_dt'].strftime('%H:%M')}–{row['sleep_end_dt'].strftime('%H:%M')}")
