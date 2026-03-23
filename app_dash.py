@@ -338,6 +338,7 @@ NAV_STYLE = {'padding': '8px 14px', 'borderRadius': '6px', 'cursor': 'pointer',
 app = Dash(__name__, suppress_callback_exceptions=True)
 app.index_string = app.index_string.replace('</head>', """
 <style>
+/* Dash React-Select v2 actual class names */
 .dark-dropdown .Select-control,
 .dark-dropdown .Select--single > .Select-control {
     background-color: #1a1a1d !important;
@@ -377,6 +378,7 @@ app.index_string = app.index_string.replace('</head>', """
 .dark-dropdown .Select-arrow { border-top-color: #70707a !important; }
 .dark-dropdown .Select-input > input { color: #e8e6f0 !important; }
 .dark-dropdown .Select-noresults { background: #1a1a1d !important; color: #70707a !important; }
+/* ── custom range slider ── */
 input[type=range] {
     -webkit-appearance: none;
     appearance: none;
@@ -387,21 +389,25 @@ input[type=range] {
     cursor: pointer;
     background: transparent;
 }
+/* track — webkit */
 input[type=range]::-webkit-slider-runnable-track {
     height: 4px;
     border-radius: 2px;
     background: #242428;
 }
+/* track — firefox */
 input[type=range]::-moz-range-track {
     height: 4px;
     border-radius: 2px;
     background: #242428;
 }
+/* fill left of thumb — firefox */
 input[type=range]::-moz-range-progress {
     height: 4px;
     border-radius: 2px;
     background: #a78bfa;
 }
+/* thumb — webkit */
 input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -418,6 +424,7 @@ input[type=range]:hover::-webkit-slider-thumb,
 input[type=range]:focus::-webkit-slider-thumb {
     box-shadow: 0 0 0 4px rgba(167,139,250,0.25);
 }
+/* thumb — firefox */
 input[type=range]::-moz-range-thumb {
     width: 16px;
     height: 16px;
@@ -426,6 +433,8 @@ input[type=range]::-moz-range-thumb {
     border: 2px solid #e8e6f0;
     cursor: pointer;
 }
+
+/* slider tooltip */
 .rc-slider-tooltip-inner {
     background-color: #1a1a1d !important;
     border: 1px solid #242428 !important;
@@ -441,12 +450,11 @@ input[type=range]::-moz-range-thumb {
 </style>
 """)
 
-# expose server for gunicorn
-server = app.server
 
 app.layout = html.Div(style={'background': BG, 'minHeight': '100vh',
                               'fontFamily': 'DM Sans, system-ui, sans-serif', 'color': TEXT}, children=[
     html.Div(style={'display': 'flex', 'maxWidth': '1200px', 'margin': '0 auto'}, children=[
+        # sidebar
         html.Div(style={'width': '200px', 'flexShrink': '0', 'background': '#0f1014',
                         'borderRight': f'1px solid {BORDER}', 'padding': '24px 16px',
                         'minHeight': '100vh', 'position': 'sticky', 'top': '0'}, children=[
@@ -454,9 +462,9 @@ app.layout = html.Div(style={'background': BG, 'minHeight': '100vh',
             html.Div('& Sleep Quality', style={'fontSize': '13px', 'fontWeight': '500', 'color': TEXT, 'marginBottom': '4px'}),
             html.Div('ELEC70126 · Imperial College', style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace',
                      'paddingBottom': '14px', 'borderBottom': f'1px solid {BORDER}', 'marginBottom': '12px'}),
-            dcc.Link('Overview',    href='/',            style=NAV_STYLE),
-            dcc.Link('Daylighting', href='/daylighting', style=NAV_STYLE),
-            dcc.Link('Humidity',    href='/humidity',    style=NAV_STYLE),
+            dcc.Link('Overview',         href='/',            style=NAV_STYLE),
+            dcc.Link('Daylighting',      href='/daylighting', style=NAV_STYLE),
+            dcc.Link('Humidity',         href='/humidity',    style=NAV_STYLE),
             html.Div(style={'borderTop': f'1px solid {BORDER}', 'marginTop': '16px', 'paddingTop': '14px',
                             'fontSize': '11px', 'color': MUTED, 'lineHeight': '2'}, children=[
                 'London, UK · 16–28 Feb 2026', html.Br(),
@@ -464,8 +472,10 @@ app.layout = html.Div(style={'background': BG, 'minHeight': '100vh',
                 'Open-Meteo API · Garmin Venu',
             ]),
         ]),
+        # main
         html.Div(style={'flex': '1', 'padding': '28px', 'minWidth': '0'}, children=[
             dcc.Location(id='url', refresh=False),
+
             html.Div(id='page-content'),
             dcc.RadioItems(
                 id='sleep-night-selector',
@@ -484,35 +494,37 @@ def page_overview():
     return html.Div([
         card('key insights', [
             html.Div(style={'display': 'grid', 'gridTemplateColumns': 'repeat(3,1fr)', 'gap': '12px'}, children=[
+                # card 1
                 html.Div([
                     html.Div('SOLAR VS INDOOR BRIGHTNESS', style={'fontSize': '10px', 'color': MUTED,
                              'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '10px'}),
-                    html.Div(f'r = {r_sb:.3f}', style={'fontSize': '24px', 'fontWeight': '400',
-                             'color': SOLAR, 'marginBottom': '8px', 'letterSpacing': '-0.5px'}),
-                    html.P(f'Room brightness closely tracks outdoor solar (R\u00b2 = {r_sb**2*100:.0f}%). '
+                    html.Div(f'r = {r_sb:.3f}', style={'fontSize': '36px', 'fontWeight': '600', 'color': SOLAR, 'marginBottom': '8px'}),
+                    html.P(f'Room brightness closely tracks outdoor solar (R² = {r_sb**2*100:.0f}%). '
                            f'London Feb cloud cover {merged["avg_cloud"].mean():.0f}% limits indoor mean to {merged["avg_brightness"].mean():.1f}%.',
                            style={'fontSize': '12px', 'color': MUTED, 'lineHeight': '1.6', 'margin': '0'}),
                 ], style={'background': BG3, 'border': f'1px solid {BORDER}', 'borderRadius': '10px', 'padding': '16px'}),
+                # card 2
                 html.Div([
                     html.Div('BRIGHT VS DIM DAYS — DEEP SLEEP', style={'fontSize': '10px', 'color': MUTED,
                              'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '10px'}),
                     html.Div([
-                        html.Span(f'{_ki_bright_deep:.1f}%', style={'fontSize': '24px', 'fontWeight': '400', 'color': BRIGHT}),
-                        html.Span(' vs ', style={'fontSize': '14px', 'color': MUTED, 'margin': '0 6px'}),
-                        html.Span(f'{_ki_dim_deep:.1f}%', style={'fontSize': '24px', 'fontWeight': '400', 'color': BRIGHT}),
-                    ], style={'marginBottom': '8px', 'lineHeight': '1', 'letterSpacing': '-0.5px'}),
+                        html.Span(f'{_ki_bright_deep:.1f}%', style={'fontSize': '26px', 'fontWeight': '600', 'color': BRIGHT}),
+                        html.Span(' vs ', style={'fontSize': '16px', 'color': MUTED, 'margin': '0 6px'}),
+                        html.Span(f'{_ki_dim_deep:.1f}%', style={'fontSize': '26px', 'fontWeight': '600', 'color': BRIGHT}),
+                    ], style={'marginBottom': '8px', 'lineHeight': '1'}),
                     html.P(f'On brighter days (above median {_brightness_median:.1f}%), deep sleep % was lower '
                            f'the following night (r = {_r_bright_deep:.3f}, p = {_p_bright_deep:.3f}).',
                            style={'fontSize': '12px', 'color': MUTED, 'lineHeight': '1.6', 'margin': '0'}),
                 ], style={'background': BG3, 'border': f'1px solid {BORDER}', 'borderRadius': '10px', 'padding': '16px'}),
+                # card 3
                 html.Div([
                     html.Div('LOW VS HIGH SLEEP HUMIDITY', style={'fontSize': '10px', 'color': MUTED,
                              'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '10px'}),
                     html.Div([
-                        html.Span(f'{_ki_hum_low:.0f}', style={'fontSize': '24px', 'fontWeight': '400', 'color': HUM}),
-                        html.Span(' vs ', style={'fontSize': '14px', 'color': MUTED, 'margin': '0 6px'}),
-                        html.Span(f'{_ki_hum_high:.0f}', style={'fontSize': '24px', 'fontWeight': '400', 'color': HUM}),
-                    ], style={'marginBottom': '8px', 'lineHeight': '1', 'letterSpacing': '-0.5px'}),
+                        html.Span(f'{_ki_hum_low:.0f}', style={'fontSize': '26px', 'fontWeight': '600', 'color': HUM}),
+                        html.Span(' vs ', style={'fontSize': '16px', 'color': MUTED, 'margin': '0 6px'}),
+                        html.Span(f'{_ki_hum_high:.0f}', style={'fontSize': '26px', 'fontWeight': '600', 'color': HUM}),
+                    ], style={'marginBottom': '8px', 'lineHeight': '1'}),
                     html.P(f'Avg sleep score: humidity up to 35% vs above 35%. '
                            f'Higher sleep-period humidity associated with lower sleep quality '
                            f'(r = {_r_hum_score:.3f}, p = {_p_hum_score:.3f}).',
@@ -599,8 +611,7 @@ def page_daylighting():
 def page_humidity():
     return html.Div([
         html.Div('Sleep-period Humidity → Sleep Quality', style={'fontSize': '20px', 'fontWeight': '400', 'color': TEXT, 'marginBottom': '4px'}),
-        html.P('Cross-night analysis: each point = one night. n = 12 (Feb 16 and Mar 1 excluded: insufficient sensor coverage).',
-               style={'fontSize': '12px', 'color': MUTED, 'marginBottom': '16px'}),
+        html.P('Cross-night analysis: each point = one night. n = 12 (Feb 28 excluded: sleep-period data unavailable).', style={'fontSize': '12px', 'color': MUTED, 'marginBottom': '16px'}),
         card('', [dcc.Graph(figure=fig_h1, config={'displayModeBar': False}),
                   html.P(f'Higher sleep-period humidity → lower sleep score (r={rh1:+.3f}, p={ph1:.3f} *).',
                          style={'fontSize': '11px', 'color': MUTED, 'fontStyle': 'italic'})]),
@@ -612,8 +623,7 @@ def page_humidity():
                          style={'fontSize': '11px', 'color': MUTED, 'fontStyle': 'italic'})]),
         html.Div(style={'height': '1px', 'background': BORDER, 'margin': '4px 0 16px 0'}),
         html.Div('Within-night Analysis', style={'fontSize': '20px', 'fontWeight': '400', 'color': TEXT, 'marginBottom': '4px'}),
-        html.P('Does humidity vary within a single night, and does it correlate with HR/resp changes?',
-               style={'fontSize': '12px', 'color': MUTED, 'marginBottom': '16px'}),
+        html.P('Does humidity vary within a single night, and does it correlate with HR/resp changes?', style={'fontSize': '12px', 'color': MUTED, 'marginBottom': '16px'}),
         card('select night', [
             html.Div(
                 id='night-btn-group',
@@ -635,14 +645,15 @@ def page_humidity():
         card('why cross-night but not within-night', [
             html.Div(style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '16px', 'fontSize': '12px', 'color': MUTED}, children=[
                 html.Div([html.Div('Cross-night (n=12) ✓', style={'color': GREEN, 'fontWeight': '500', 'marginBottom': '4px'}),
-                          'Humidity range: 21.7–43.6% (range 21.9%) — large enough to drive sleep differences. Sleep score: r=−0.527, p=0.078 *']),
+                          'Humidity range: 21–43% (Δ=22%) — large enough to drive sleep differences. Sleep score: r=−0.529, p=0.077 *']),
                 html.Div([html.Div('Within-night (15-min) ✗', style={'color': RED, 'fontWeight': '500', 'marginBottom': '4px'}),
-                          'Humidity range: 1–4% (mean 2.6%) — too small, physiological noise dominates. No consistent direction across nights.']),
+                          'Humidity range: 1–4% — too small, physiological noise dominates. Avg r=−0.125, no consistent direction.']),
             ]),
             html.P('Humidity acts as a cumulative environmental condition — the overall level matters, not moment-to-moment fluctuations.',
                    style={'fontSize': '11px', 'color': MUTED, 'fontStyle': 'italic', 'marginTop': '10px'}),
         ]),
         card('sleep-period humidity threshold explorer', [
+            # slider row: label | track | value
             html.Div([
                 html.Span('Humidity threshold',
                           style={'fontSize': '12px', 'color': MUTED, 'fontFamily': 'monospace',
@@ -659,7 +670,8 @@ def page_humidity():
                           style={'fontSize': '12px', 'color': BRIGHT, 'fontFamily': 'monospace',
                                  'fontWeight': '500', 'marginLeft': '16px', 'flexShrink': '0',
                                  'minWidth': '36px', 'textAlign': 'right'}),
-            ], style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '16px'}),
+            ], style={'display': 'flex', 'alignItems': 'center', 'gap': '0',
+                       'marginBottom': '16px'}),
             html.Div(id='hum-threshold-result'),
         ]),
     ])
@@ -670,6 +682,7 @@ def render_page(pathname):
     if pathname == '/humidity':    return page_humidity()
     return page_overview()
 
+# within-night button callbacks
 from dash import ctx
 
 @callback(
@@ -680,6 +693,7 @@ from dash import ctx
 )
 def update_night_selector(*args):
     dates = valid_nights['date_str'].tolist()
+    # determine selected: use ctx.triggered, default to first
     selected = dates[0]
     if ctx.triggered and ctx.triggered[0]['prop_id'] != '.':
         btn_id = ctx.triggered[0]['prop_id'].replace('.n_clicks', '')
@@ -706,44 +720,61 @@ def update_night_selector(*args):
 )
 def update_within_night(selected):
     night = valid_nights[valid_nights['date_str'] == selected].iloc[0]
+
     mask_in   = (indoor_raw['timestamp'] >= night['sleep_start_dt']) & \
                 (indoor_raw['timestamp'] <= night['sleep_end_dt'])
     mask_hr   = hr_raw['ts'].between(night['sleep_start_dt'], night['sleep_end_dt'])
     mask_resp = resp_raw['ts'].between(night['sleep_start_dt'], night['sleep_end_dt'])
+
     indoor_n = indoor_raw[mask_in][['timestamp', 'humidity']].copy()
     indoor_n['ts_15'] = indoor_n['timestamp'].dt.round('15min')
     indoor_n = indoor_n.groupby('ts_15')['humidity'].mean().reset_index()
+
     hr_n = hr_raw[mask_hr].copy()
     hr_n['ts_15'] = hr_n['ts'].dt.round('15min')
     hr_15 = hr_n.groupby('ts_15')['hr_value'].mean().reset_index()
+
     resp_n = resp_raw[mask_resp].copy()
     resp_n['ts_15'] = resp_n['ts'].dt.round('15min')
     resp_15 = resp_n.groupby('ts_15')['resp_value'].mean().reset_index()
+
     m = indoor_n.merge(hr_15, on='ts_15').merge(resp_15, on='ts_15')
+
     if len(m) < 5:
         return go.Figure(), html.P('Insufficient data', style={'color': RED})
+
     r_hr,   p_hr   = stats.pearsonr(m['humidity'], m['hr_value'])
     r_resp, p_resp = stats.pearsonr(m['humidity'], m['resp_value'])
     hum_range = m['humidity'].max() - m['humidity'].min()
+
+    # normalize resp to HR scale for visual — hover still shows real values
     resp_scaled = m['resp_value'] / m['resp_value'].mean() * m['hr_value'].mean()
+
     fig = make_subplots(specs=[[{"secondary_y": True}]])
+
     fig.add_trace(go.Scatter(
-        x=m['ts_15'], y=m['humidity'], name='Humidity (%)',
+        x=m['ts_15'], y=m['humidity'],
+        name='Humidity (%)',
         line=dict(color=HUM, width=2, shape='spline', smoothing=1.0),
         fill='tozeroy', fillcolor='rgba(56,189,248,0.1)',
         hovertemplate='%{x|%H:%M}<br>Humidity: %{y:.1f}%<extra></extra>'
     ), secondary_y=False)
+
     fig.add_trace(go.Scatter(
-        x=m['ts_15'], y=m['hr_value'], name='HR (bpm)',
+        x=m['ts_15'], y=m['hr_value'],
+        name='HR (bpm)',
         line=dict(color=RED, width=1.5, shape='spline', smoothing=1.0),
         hovertemplate='%{x|%H:%M}<br>HR: %{y:.1f} bpm<extra></extra>'
     ), secondary_y=True)
+
     fig.add_trace(go.Scatter(
-        x=m['ts_15'], y=resp_scaled, name='Resp (br/min)',
+        x=m['ts_15'], y=resp_scaled,
+        name='Resp (br/min)',
         line=dict(color='#fb923c', width=1.5, dash='dot', shape='spline', smoothing=1.0),
         customdata=m['resp_value'],
         hovertemplate='%{x|%H:%M}<br>Resp: %{customdata:.1f} br/min<extra></extra>'
     ), secondary_y=True)
+
     fig.update_layout(**plot_layout(
         height=280, hovermode='x unified',
         legend=dict(orientation='h', y=1.12, font=dict(color=TEXT, size=11)),
@@ -751,33 +782,51 @@ def update_within_night(selected):
         hoverlabel=dict(bgcolor=BG2, bordercolor=BORDER, font=dict(color=TEXT, size=11))
     ))
     fig.update_xaxes(tickformat='%H:%M', **NOGRID, tickfont=dict(color=TEXT))
-    fig.update_yaxes(title_text='Humidity (%)', secondary_y=False,
-        title_font=dict(color=HUM, size=10), tickfont=dict(color=MUTED), **GRID)
-    fig.update_yaxes(title_text='HR (bpm)', secondary_y=True,
-        title_font=dict(color=RED, size=10), tickfont=dict(color=MUTED), showgrid=False)
+    fig.update_yaxes(
+        title_text='Humidity (%)', secondary_y=False,
+        title_font=dict(color=HUM, size=10), tickfont=dict(color=MUTED), **GRID
+    )
+    fig.update_yaxes(
+        title_text='HR (bpm)',
+        secondary_y=True,
+        title_font=dict(color=RED, size=10), tickfont=dict(color=MUTED), showgrid=False
+    )
+
     stats_div = html.Div(
         style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr 1fr', 'gap': '12px'},
         children=[
             html.Div([
-                html.Div('Humidity range', style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
-                         'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '4px'}),
-                html.Div(f'{hum_range:.0f}%', style={'fontSize': '20px', 'fontWeight': '500', 'color': TEXT}),
-                html.Div(f'{m["humidity"].min():.0f}–{m["humidity"].max():.0f}%', style={'fontSize': '10px', 'color': MUTED}),
+                html.Div('Humidity range',
+                         style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
+                                'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '4px'}),
+                html.Div(f'{hum_range:.0f}%',
+                         style={'fontSize': '20px', 'fontWeight': '500', 'color': TEXT}),
+                html.Div(f'{m["humidity"].min():.0f}–{m["humidity"].max():.0f}%',
+                         style={'fontSize': '10px', 'color': MUTED}),
             ], style={'background': BG2, 'border': f'1px solid {BORDER}', 'borderRadius': '8px', 'padding': '12px'}),
+
             html.Div([
-                html.Div('Humidity vs HR', style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
-                         'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '4px'}),
-                html.Div(f'r = {r_hr:+.3f}', style={'fontSize': '20px', 'fontWeight': '500', 'color': TEXT}),
-                html.Div(f'p = {p_hr:.3f}', style={'fontSize': '10px', 'color': MUTED}),
+                html.Div('Humidity vs HR',
+                         style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
+                                'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '4px'}),
+                html.Div(f'r = {r_hr:+.3f}',
+                         style={'fontSize': '20px', 'fontWeight': '500', 'color': TEXT}),
+                html.Div(f'p = {p_hr:.3f}',
+                         style={'fontSize': '10px', 'color': MUTED}),
             ], style={'background': BG2, 'border': f'1px solid {BORDER}', 'borderRadius': '8px', 'padding': '12px'}),
+
             html.Div([
-                html.Div('Humidity vs Resp', style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
-                         'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '4px'}),
-                html.Div(f'r = {r_resp:+.3f}', style={'fontSize': '20px', 'fontWeight': '500', 'color': TEXT}),
-                html.Div(f'p = {p_resp:.3f}', style={'fontSize': '10px', 'color': MUTED}),
+                html.Div('Humidity vs Resp',
+                         style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
+                                'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '4px'}),
+                html.Div(f'r = {r_resp:+.3f}',
+                         style={'fontSize': '20px', 'fontWeight': '500', 'color': TEXT}),
+                html.Div(f'p = {p_resp:.3f}',
+                         style={'fontSize': '10px', 'color': MUTED}),
             ], style={'background': BG2, 'border': f'1px solid {BORDER}', 'borderRadius': '8px', 'padding': '12px'}),
         ]
     )
+
     return fig, stats_div
 
 @callback(Output('hum-threshold-result', 'children'), Input('hum-slider', 'value'))
@@ -793,12 +842,12 @@ def update_hum_threshold(threshold):
                   html.Span(', avg sleep score '),
                   html.Span(avg_a, style={'fontWeight': '500', 'color': RED})],
                  style={'marginBottom': '6px', 'fontSize': '12px', 'color': MUTED}),
-        html.Div([html.Span(f'Nights with sleep-period humidity up to {int(threshold)}%: '),
+        html.Div([html.Span(f'Nights with sleep-period humidity ≤ {int(threshold)}%: '),
                   html.Span(f'{len(below)} nights', style={'fontWeight': '500', 'color': TEXT}),
                   html.Span(', avg sleep score '),
                   html.Span(avg_b, style={'fontWeight': '500', 'color': GREEN})],
                  style={'fontSize': '12px', 'color': MUTED}),
-        html.P(f'Drag to explore: nights above threshold tend to have lower sleep scores (r = {_r_hum_score:+.3f}, p = {_p_hum_score:.3f} *)',
+        html.P('Drag to explore: nights above threshold tend to have lower sleep scores (r = −0.529, p = 0.077 *)',
                style={'fontSize': '10px', 'color': MUTED, 'fontStyle': 'italic', 'marginTop': '8px'}),
     ], style={'background': BG, 'padding': '12px', 'borderRadius': '6px'})
 
@@ -862,33 +911,36 @@ def update_sleep_detail(selected):
     light_score = min(100, int(row['avg_brightness'] * 1.5 + row['avg_solar'] / 5))
     score = int(row['sleep_score'])
     awake_pct = row['awake_h'] / row['total_sleep_h'] * 100
+    score_color = GREEN if score >= 80 else YELLOW if score >= 65 else RED
     ls_color = GREEN if light_score >= 70 else YELLOW if light_score >= 40 else RED
     hum_sleep = f"{row['avg_humidity_sleep']:.1f}%" if not pd.isna(row.get('avg_humidity_sleep', float('nan'))) else 'N/A'
     stacked_bar = html.Div([
-        html.Div(style={'display': 'flex', 'width': '100%', 'borderRadius': '4px',
-                        'overflow': 'hidden', 'marginBottom': '6px'}, children=[
-            html.Div(style={'width': f"{row['deep_pct']:.1f}%", 'height': '20px', 'background': DEEP}),
-            html.Div(style={'width': f"{row['rem_pct']:.1f}%", 'height': '20px', 'background': REM}),
-            html.Div(style={'width': f"{row['light_pct']:.1f}%", 'height': '20px', 'background': '#4b5563'}),
-            html.Div(style={'width': f"{awake_pct:.1f}%", 'height': '20px', 'background': RED}),
-        ]),
         html.Div([
-            html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
-                                       'background': DEEP, 'borderRadius': '2px', 'marginRight': '4px'}),
-                       f"deep {row['deep_pct']:.0f}%"],
-                      style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace', 'marginRight': '14px'}),
-            html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
-                                       'background': REM, 'borderRadius': '2px', 'marginRight': '4px'}),
-                       f"REM {row['rem_pct']:.0f}%"],
-                      style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace', 'marginRight': '14px'}),
-            html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
-                                       'background': '#4b5563', 'borderRadius': '2px', 'marginRight': '4px'}),
-                       f"light {row['light_pct']:.0f}%"],
-                      style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace', 'marginRight': '14px'}),
-            html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
-                                       'background': RED, 'borderRadius': '2px', 'marginRight': '4px'}),
-                       f"awake {awake_pct:.0f}%"],
-                      style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace'}),
+            html.Div(style={'display': 'flex', 'width': '100%', 'borderRadius': '4px',
+                            'overflow': 'hidden', 'marginBottom': '6px'}, children=[
+                html.Div(style={'width': f"{row['deep_pct']:.1f}%", 'height': '20px', 'background': DEEP}),
+                html.Div(style={'width': f"{row['rem_pct']:.1f}%", 'height': '20px', 'background': REM}),
+                html.Div(style={'width': f"{row['light_pct']:.1f}%", 'height': '20px', 'background': '#4b5563'}),
+                html.Div(style={'width': f"{awake_pct:.1f}%", 'height': '20px', 'background': RED}),
+            ]),
+            html.Div([
+                html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
+                                           'background': DEEP, 'borderRadius': '2px', 'marginRight': '4px'}),
+                           f"deep {row['deep_pct']:.0f}%"],
+                          style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace', 'marginRight': '14px'}),
+                html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
+                                           'background': REM, 'borderRadius': '2px', 'marginRight': '4px'}),
+                           f"REM {row['rem_pct']:.0f}%"],
+                          style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace', 'marginRight': '14px'}),
+                html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
+                                           'background': '#4b5563', 'borderRadius': '2px', 'marginRight': '4px'}),
+                           f"light {row['light_pct']:.0f}%"],
+                          style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace', 'marginRight': '14px'}),
+                html.Span([html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
+                                           'background': RED, 'borderRadius': '2px', 'marginRight': '4px'}),
+                           f"awake {awake_pct:.0f}%"],
+                          style={'fontSize': '10px', 'color': MUTED, 'fontFamily': 'monospace'}),
+            ]),
         ]),
     ], style={'marginBottom': '16px'})
     return html.Div([
@@ -899,7 +951,7 @@ def update_sleep_detail(selected):
         html.Div(style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '20px', 'marginTop': '14px'}, children=[
             html.Div([
                 html.Div('Sleep metrics', style={'fontSize': '10px', 'color': MUTED, 'textTransform': 'uppercase',
-                         'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '10px'}),
+                                                 'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '10px'}),
                 stat_row('Sleep score', badge(score, score)),
                 stat_row('Total sleep', f'{row["total_sleep_h"]:.1f} h'),
                 stat_row('Deep / REM / Light', f'{row["deep_pct"]:.1f}% / {row["rem_pct"]:.1f}% / {row["light_pct"]:.1f}%'),
@@ -924,6 +976,7 @@ def update_sleep_detail(selected):
         ]),
     ])
 
+# clientside callback — update range track fill + label
 app.clientside_callback(
     '''
     function(value) {
@@ -942,5 +995,9 @@ app.clientside_callback(
     prevent_initial_call=False,
 )
 
+server = app.server  # expose for gunicorn
+
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=8050)
+    import os
+    port = int(os.environ.get('PORT', 8050))
+    app.run(debug=False, host='0.0.0.0', port=port)
