@@ -498,7 +498,7 @@ def page_overview():
                 html.Div([
                     html.Div('SOLAR VS INDOOR BRIGHTNESS', style={'fontSize': '10px', 'color': MUTED,
                              'letterSpacing': '.8px', 'fontFamily': 'monospace', 'marginBottom': '10px'}),
-                    html.Div(f'r = {r_sb:.3f}', style={'fontSize': '36px', 'fontWeight': '600', 'color': SOLAR, 'marginBottom': '8px'}),
+                    html.Div(f'r = {r_sb:.3f}', style={'fontSize': '26px', 'fontWeight': '600', 'color': SOLAR, 'marginBottom': '8px'}),
                     html.P(f'Room brightness closely tracks outdoor solar (R² = {r_sb**2*100:.0f}%). '
                            f'London Feb cloud cover {merged["avg_cloud"].mean():.0f}% limits indoor mean to {merged["avg_brightness"].mean():.1f}%.',
                            style={'fontSize': '12px', 'color': MUTED, 'lineHeight': '1.6', 'margin': '0'}),
