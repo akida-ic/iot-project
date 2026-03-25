@@ -360,14 +360,13 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
 ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
 plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha='right')
 plt.tight_layout()
+fig.text(0.5, -0.01,
+         'London, Feb 16–28 2026  ·  ESP32 LDR sensor (08:00–18:00)  ·  Open-Meteo API  ·  Garmin Venu',
+         ha='center', fontsize=8, color='#666', style='italic')
 plt.savefig('figures/fig1_daily_overview.png', dpi=150, bbox_inches='tight')
 plt.close()
 print("saved fig1_daily_overview")
 
-
-fig, axes = plt.subplots(2, 3, figsize=(14, 9))
-fig.suptitle('Correlation Analysis — Daylighting & Sleep Quality',
-             fontsize=13, fontweight='bold')
 
 def scatter_fit(ax, x, y, xlabel, ylabel, title, color):
     sub = merged[[x, y]].dropna()
@@ -385,17 +384,35 @@ def scatter_fit(ax, x, y, xlabel, ylabel, title, color):
         ax.annotate(merged.loc[row.name, 'light_date'][5:], (row[x], row[y]),
                     textcoords='offset points', xytext=(4, 3), fontsize=6, color='#888')
 
-scatter_fit(axes[0,0], 'avg_solar',            'avg_brightness', 'Solar radiation (W/m²)',      'Indoor brightness (%)',             'A  Solar -> Brightness',       SOLAR)
-scatter_fit(axes[0,1], 'avg_brightness',        'deep_pct',       'Indoor brightness (%)',        'Deep sleep (%)',                    'B  Brightness -> Deep sleep',  DEEP)
-scatter_fit(axes[0,2], 'avg_brightness',        'resp_std',       'Indoor brightness (%)',        'Respiration variability (SD)',       'C  Brightness -> Resp var',    CYAN)
-scatter_fit(axes[1,0], 'avg_humidity_presleep', 'sleep_score',    'Pre-sleep humidity (%, 20-23h)','Sleep score',                      'D  Humidity -> Sleep score',   HUM_PRE)
-scatter_fit(axes[1,1], 'avg_humidity_presleep', 'hr_mean',        'Pre-sleep humidity (%, 20-23h)','Mean sleep HR (bpm)',              'E  Humidity -> Sleep HR',      HR)
-scatter_fit(axes[1,2], 'avg_solar',             'deep_pct',       'Solar radiation (W/m²)',       'Deep sleep (%)',                    'F  Solar -> Deep sleep',       SOLAR)
-
+# fig2a — daylighting correlations (top row)
+fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+fig.suptitle('Figure 1. Correlation Analysis — Daylighting & Sleep Quality',
+             fontsize=13, fontweight='bold')
+scatter_fit(axes[0], 'avg_solar',       'avg_brightness', 'Solar radiation (W/m²)',  'Indoor brightness (%)',       'A  Solar -> Brightness',      SOLAR)
+scatter_fit(axes[1], 'avg_brightness',  'deep_pct',       'Indoor brightness (%)',   'Deep sleep (%)',              'B  Brightness -> Deep sleep', DEEP)
+scatter_fit(axes[2], 'avg_brightness',  'resp_std',       'Indoor brightness (%)',   'Respiration variability (SD)','C  Brightness -> Resp var',   CYAN)
 plt.tight_layout()
-plt.savefig('figures/fig2_scatter_correlations.png', dpi=150, bbox_inches='tight')
+fig.text(0.5, -0.04,
+         '** p < 0.05  ·  * p < 0.1  ·  ns p ≥ 0.1  ·  n = 13 days (daylighting, lag=1d)',
+         ha='center', fontsize=8, color='#666', style='italic')
+plt.savefig('figures/fig2a_daylighting_scatter.png', dpi=150, bbox_inches='tight')
 plt.close()
-print("saved fig2_scatter_correlations")
+print("saved fig2a_daylighting_scatter")
+
+# fig2b — humidity correlations (bottom row)
+fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+fig.suptitle('Figure 2. Correlation Analysis — Sleep-period Humidity & Sleep Quality',
+             fontsize=13, fontweight='bold')
+scatter_fit(axes[0], 'avg_humidity_sleep', 'sleep_score', 'Sleep-period humidity (%)', 'Sleep score',          'D  Sleep humidity -> Sleep score', HUM_SLEEP)
+scatter_fit(axes[1], 'avg_humidity_sleep', 'hr_mean',     'Sleep-period humidity (%)', 'Mean sleep HR (bpm)',  'E  Sleep humidity -> Sleep HR',    HR)
+scatter_fit(axes[2], 'avg_solar',          'deep_pct',    'Solar radiation (W/m²)',    'Deep sleep (%)',       'F  Solar -> Deep sleep',           SOLAR)
+plt.tight_layout()
+fig.text(0.5, -0.04,
+         '** p < 0.05  ·  * p < 0.1  ·  ns p ≥ 0.1  ·  n = 12 nights (sleep-period humidity)  ·  n = 13 days (solar)',
+         ha='center', fontsize=8, color='#666', style='italic')
+plt.savefig('figures/fig2b_humidity_scatter.png', dpi=150, bbox_inches='tight')
+plt.close()
+print("saved fig2b_humidity_scatter")
 
 
 fig, axes = plt.subplots(1, 3, figsize=(13, 5))
@@ -418,14 +435,17 @@ for ax, (hum, hlbl, color) in zip(axes, [
     ax.set_ylabel('Sleep score', fontsize=9)
     ax.grid(alpha=0.25)
 plt.tight_layout()
+fig.text(0.5, -0.04,
+         '** p < 0.05  ·  * p < 0.1  ·  ns p ≥ 0.1  ·  n = 13 days (daytime/pre-sleep)  ·  n = 12 nights (sleep-period)',
+         ha='center', fontsize=8, color='#666', style='italic')
 plt.savefig('figures/fig3_humidity_windows.png', dpi=150, bbox_inches='tight')
 plt.close()
 print("saved fig3_humidity_windows")
 
 
-predictors  = ['avg_brightness', 'avg_solar', 'avg_humidity_presleep', 'avg_temp']
+predictors  = ['avg_brightness', 'avg_solar', 'avg_humidity_sleep', 'avg_temp']
 outcomes    = ['sleep_score', 'deep_pct', 'rem_pct', 'hr_mean', 'resp_mean', 'resp_std']
-pred_labels = ['Indoor\nbrightness', 'Outdoor\nsolar', 'Pre-sleep\nhumidity', 'Indoor\ntemp']
+pred_labels = ['Indoor\nbrightness', 'Outdoor\nsolar', 'Sleep-period\nhumidity', 'Indoor\ntemp']
 out_labels  = ['Sleep\nscore', 'Deep\nsleep %', 'REM %', 'Sleep\nHR', 'Resp\nmean', 'Resp\nvariability']
 
 matrix  = np.zeros((len(predictors), len(outcomes)))
@@ -439,7 +459,7 @@ for i, pred in enumerate(predictors):
             pmatrix[i, j] = p
 
 fig, ax = plt.subplots(figsize=(8, 5))
-fig.suptitle('Pearson r — Environmental predictors vs sleep outcomes (lag=1d)',
+fig.suptitle('Figure 4. Pearson r — Environmental predictors vs sleep outcomes (lag=1d)',
              fontsize=11, fontweight='bold')
 im = ax.imshow(matrix, cmap='RdBu_r', vmin=-1, vmax=1, aspect='auto')
 plt.colorbar(im, ax=ax, label='Pearson r')
@@ -456,13 +476,16 @@ for i in range(len(predictors)):
                 fontweight='bold' if sig else 'normal')
 ax.set_title('** p<0.05   * p<0.1', fontsize=9, pad=8)
 plt.tight_layout()
+fig.text(0.5, -0.04,
+         '** p < 0.05  ·  * p < 0.1  ·  n = 13 days (daylighting, lag=1d)  ·  n = 12 nights (sleep-period humidity)',
+         ha='center', fontsize=8, color='#666', style='italic')
 plt.savefig('figures/fig4_correlation_heatmap.png', dpi=150, bbox_inches='tight')
 plt.close()
 print("saved fig4_correlation_heatmap")
 
 
 fig, axes = plt.subplots(2, 1, figsize=(14, 9))
-fig.suptitle('Moving Average & Anomaly Detection', fontsize=13, fontweight='bold')
+fig.suptitle('Figure 3. Moving Average & Anomaly Detection', fontsize=13, fontweight='bold')
 
 ax = axes[0]
 ax.plot(ts_b.index, ts_b.values, color='#a78bfa', linewidth=0.7, alpha=0.6,
